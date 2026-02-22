@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriAI - Smart Farming Assistant</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 { font-size: 2em; margin-bottom: 10px; }
+
+        .badges {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .badge {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+
+        .chat-container { padding: 30px; }
+
+        /* ── Audio Controls ── */
+        .audio-controls {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .audio-controls h3 { color: #059669; margin-bottom: 15px; font-size: 16px; }
+
+        .audio-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .audio-btn {
+            padding: 15px 20px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        .audio-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .record-btn { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); }
+        .record-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(139,92,246,0.4); }
+        .record-btn.recording { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); animation: pulse 1.5s infinite; }
+
+        .upload-btn { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .upload-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(245,158,11,0.4); }
+
+        .speak-btn { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
+        .speak-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(6,182,212,0.4); }
+        .speak-btn.listening { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); animation: pulse 1.5s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+            50%       { box-shadow: 0 0 0 15px rgba(239,68,68,0); }
+        }
+
+        .audio-status {
+            background: white;
+            padding: 12px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+            font-size: 14px;
+            color: #059669;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .audio-preview { background: white; padding: 15px; border-radius: 10px; margin-top: 15px; display: none; }
+        .audio-preview.active { display: block; }
+        .audio-preview audio { width: 100%; margin-top: 10px; }
+
+        .preview-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .preview-name { font-weight: 600; color: #059669; }
+
+        .clear-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .send-audio-btn {
+            display: block;
+            width: 100%;
+            margin-top: 12px;
+            padding: 12px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .send-audio-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(16,185,129,0.4); }
+        .send-audio-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .lang-selector {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+        }
+
+        .lang-selector select {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+
+        /* ── Messages ── */
+        .messages {
+            height: 350px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 10px;
+        }
+
+        .message { margin-bottom: 15px; display: flex; animation: slideIn 0.3s ease; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user { justify-content: flex-end; }
+
+        .message-content {
+            max-width: 75%;
+            padding: 15px 20px;
+            border-radius: 15px;
+            line-height: 1.6;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.assistant .message-content {
+            background: white;
+            color: #1f2937;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-bottom-left-radius: 5px;
+        }
+
+        .message.error .message-content {
+            background: #fee2e2;
+            color: #991b1b;
+            border-bottom-left-radius: 5px;
+        }
+
+        /* ── Input ── */
+        .input-area { display: flex; gap: 10px; }
+
+        #userInput {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        #userInput:focus { border-color: #10b981; }
+
+        #sendBtn {
+            padding: 15px 35px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 600;
+        }
+
+        #sendBtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(16,185,129,0.4); }
+        #sendBtn:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
+
+        .loading { display: flex; gap: 5px; padding: 15px 20px; }
+        .loading span {
+            width: 8px; height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .loading span:nth-child(1) { animation-delay: -0.32s; }
+        .loading span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40%            { transform: scale(1); }
+        }
+
+        .status { text-align: center; padding: 10px; color: #6b7280; font-size: 14px; }
+
+        input[type="file"] { display: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🌾 AgriAI – Smart Farming Assistant</h1>
+        <p>Multiple ways to ask your agriculture questions</p>
+        <div class="badges">
+            <div class="badge">🎤 Microphone</div>
+            <div class="badge">📁 Upload File</div>
+            <div class="badge">💬 Live Voice</div>
+            <div class="badge">🌍 10+ Languages</div>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <!-- Audio Controls -->
+        <div class="audio-controls">
+            <h3>🎙️ Choose Your Input Method:</h3>
+
+            <div class="audio-buttons">
+                <button class="audio-btn record-btn" id="recordBtn" onclick="toggleRecording()">
+                    <span id="recordIcon">⏺️</span>
+                    <span id="recordText">Record Audio</span>
+                </button>
+
+                <button class="audio-btn upload-btn" onclick="document.getElementById('audioFile').click()">
+                    📁 Upload Audio
+                </button>
+
+                <button class="audio-btn speak-btn" id="speakBtn" onclick="toggleSpeechRecognition()">
+                    <span id="speakIcon">🎤</span>
+                    <span id="speakText">Live Voice</span>
+                </button>
+            </div>
+
+            <div class="lang-selector">
+                <label>🌐 Language:</label>
+                <select id="languageSelect">
+                    <option value="en-US">English</option>
+                    <option value="hi-IN">हिन्दी (Hindi)</option>
+                    <option value="ta-IN">தமிழ் (Tamil)</option>
+                    <option value="te-IN">తెలుగు (Telugu)</option>
+                    <option value="kn-IN">ಕನ್ನಡ (Kannada)</option>
+                    <option value="ml-IN">മലയാളം (Malayalam)</option>
+                    <option value="bn-IN">বাংলা (Bengali)</option>
+                    <option value="mr-IN">मराठी (Marathi)</option>
+                    <option value="gu-IN">ગુજરાતી (Gujarati)</option>
+                    <option value="pa-IN">ਪੰਜਾਬੀ (Punjabi)</option>
+                </select>
+            </div>
+
+            <div class="audio-status" id="audioStatus">Ready to listen 🎧</div>
+
+            <div class="audio-preview" id="audioPreview">
+                <div class="preview-info">
+                    <span class="preview-name" id="previewName">Audio ready</span>
+                    <button class="clear-btn" onclick="clearAudio()">✕ Clear</button>
+                </div>
+                <audio id="audioPlayer" controls></audio>
+                <button class="send-audio-btn" id="sendAudioBtn" onclick="sendAudio()">
+                    🚀 Transcribe &amp; Ask AI
+                </button>
+            </div>
+        </div>
+
+        <input type="file" id="audioFile" accept="audio/*">
+
+        <!-- Messages -->
+        <div class="messages" id="messages">
+            <div class="message assistant">
+                <div class="message-content">
+                    👋 <strong>Welcome to AgriAI!</strong><br><br>
+                    <strong>3 Ways to Ask Questions:</strong><br>
+                    ⏺️ <strong>Record Audio</strong> – Capture from your microphone, then click Transcribe &amp; Ask AI<br>
+                    📁 <strong>Upload File</strong> – Upload an MP3, WAV, or WebM audio file<br>
+                    🎤 <strong>Live Voice</strong> – Speak directly and it sends automatically<br>
+                    ✍️ <strong>Type</strong> – Type your question in the box below<br><br>
+                    Ask me anything about crops, diseases, fertilizers, or farming!
+                </div>
+            </div>
+        </div>
+
+        <!-- Text Input -->
+        <div class="input-area">
+            <input
+                type="text"
+                id="userInput"
+                placeholder="Type your question or use audio input above..."
+                onkeypress="if(event.key==='Enter' && !event.shiftKey) sendTextMessage()"
+            >
+            <button id="sendBtn" onclick="sendTextMessage()">Send</button>
+        </div>
+
+        <div class="status" id="status">Backend: Checking...</div>
+    </div>
+</div>
+
+<script>
+    // ─── DOM refs ───────────────────────────────────────────────
+    const messagesDiv   = document.getElementById('messages');
+    const userInput     = document.getElementById('userInput');
+    const sendBtn       = document.getElementById('sendBtn');
+    const status        = document.getElementById('status');
+    const audioStatus   = document.getElementById('audioStatus');
+    const recordBtn     = document.getElementById('recordBtn');
+    const speakBtn      = document.getElementById('speakBtn');
+    const audioPreview  = document.getElementById('audioPreview');
+    const audioPlayer   = document.getElementById('audioPlayer');
+    const previewName   = document.getElementById('previewName');
+    const audioFile     = document.getElementById('audioFile');
+    const languageSelect = document.getElementById('languageSelect');
+    const sendAudioBtn  = document.getElementById('sendAudioBtn');
+
+    // ─── State ──────────────────────────────────────────────────
+    let mediaRecorder   = null;
+    let audioChunks     = [];
+    let isRecording     = false;
+    let currentAudioBlob = null;
+    let currentMimeType = 'audio/webm';
+
+    let recognition     = null;
+    let isListening     = false;
+
+    // ─── Speech Recognition (Live Voice) ────────────────────────
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SR();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => {
+            isListening = true;
+            speakBtn.classList.add('listening');
+            document.getElementById('speakIcon').textContent = '🔴';
+            document.getElementById('speakText').textContent = 'Listening...';
+            setAudioStatus('🎤 Listening… Speak now!', '#fef3c7', '#92400e');
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            userInput.value = transcript;
+            setAudioStatus(`✅ Heard: "${transcript}"`, '#d1fae5', '#059669');
+            addMessage('user', `🎤 ${transcript}`);
+            sendToBackend(transcript);
+        };
+
+        recognition.onend = () => {
+            isListening = false;
+            speakBtn.classList.remove('listening');
+            document.getElementById('speakIcon').textContent = '🎤';
+            document.getElementById('speakText').textContent = 'Live Voice';
+            setTimeout(() => setAudioStatus('Ready to listen 🎧', 'white', '#059669'), 2000);
+        };
+
+        recognition.onerror = (event) => {
+            isListening = false;
+            speakBtn.classList.remove('listening');
+            document.getElementById('speakIcon').textContent = '🎤';
+            document.getElementById('speakText').textContent = 'Live Voice';
+            setAudioStatus('❌ Error: ' + event.error, '#fee2e2', '#991b1b');
+        };
+    }
+
+    function toggleSpeechRecognition() {
+        if (!recognition) {
+            alert('Speech recognition not supported. Please use Chrome or Edge.');
+            return;
+        }
+        if (isListening) {
+            recognition.stop();
+        } else {
+            recognition.lang = languageSelect.value;
+            recognition.start();
+        }
+    }
+
+    // ─── MediaRecorder (Record Audio) ───────────────────────────
+    async function toggleRecording() {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            await startRecording();
+        }
+    }
+
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            // Detect the best supported MIME type — don't force audio/wav
+            const preferredTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg'];
+            currentMimeType = preferredTypes.find(t => MediaRecorder.isTypeSupported(t)) || '';
+
+            mediaRecorder = currentMimeType
+                ? new MediaRecorder(stream, { mimeType: currentMimeType })
+                : new MediaRecorder(stream);
+
+            // Record the actual mime type after construction
+            currentMimeType = mediaRecorder.mimeType || 'audio/webm';
+
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: currentMimeType });
+                currentAudioBlob = audioBlob;
+                const audioUrl = URL.createObjectURL(audioBlob);
+                audioPlayer.src = audioUrl;
+                audioPreview.classList.add('active');
+                previewName.textContent = '🎙️ Your Recording';
+                setAudioStatus('✅ Recording saved! Click "Transcribe & Ask AI"', '#d1fae5', '#059669');
+                stream.getTracks().forEach(t => t.stop());
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            recordBtn.classList.add('recording');
+            document.getElementById('recordIcon').textContent = '⏹️';
+            document.getElementById('recordText').textContent = 'Stop Recording';
+            setAudioStatus('🔴 Recording… Click again to stop', '#fee2e2', '#991b1b');
+
+        } catch (err) {
+            console.error('Microphone error:', err);
+            alert('Microphone access denied. Please allow microphone access in browser settings.');
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+            isRecording = false;
+            recordBtn.classList.remove('recording');
+            document.getElementById('recordIcon').textContent = '⏺️';
+            document.getElementById('recordText').textContent = 'Record Audio';
+        }
+    }
+
+    // ─── File Upload ─────────────────────────────────────────────
+    audioFile.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        currentAudioBlob = file;
+        currentMimeType = file.type || 'audio/webm';
+        const audioUrl = URL.createObjectURL(file);
+        audioPlayer.src = audioUrl;
+        audioPreview.classList.add('active');
+        previewName.textContent = `📁 ${file.name}`;
+        setAudioStatus('✅ File loaded! Click "Transcribe & Ask AI"', '#d1fae5', '#059669');
+    });
+
+    function clearAudio() {
+        currentAudioBlob = null;
+        audioPreview.classList.remove('active');
+        audioPlayer.src = '';
+        audioFile.value = '';
+        setAudioStatus('Ready to listen 🎧', 'white', '#059669');
+    }
+
+    // ─── Send Audio to backend for transcription ─────────────────
+    async function sendAudio() {
+        if (!currentAudioBlob) return;
+
+        sendAudioBtn.disabled = true;
+        sendAudioBtn.textContent = '⏳ Transcribing…';
+        setAudioStatus('⏳ Sending audio to be transcribed…', '#fef3c7', '#92400e');
+
+        const formData = new FormData();
+        const ext = currentMimeType.includes('ogg') ? '.ogg'
+                  : currentMimeType.includes('mp4') ? '.mp4'
+                  : currentMimeType.includes('mpeg') || currentMimeType.includes('mp3') ? '.mp3'
+                  : '.webm';
+        formData.append('audio', currentAudioBlob, `recording${ext}`);
+
+        try {
+            const res = await fetch('http://localhost:5000/api/transcribe', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await res.json();
+
+            if (data.success && data.transcript) {
+                const transcript = data.transcript.trim();
+                setAudioStatus(`📝 Transcribed: "${transcript}"`, '#d1fae5', '#059669');
+                addMessage('user', `🎙️ ${transcript}`);
+                clearAudio();
+                await sendToBackend(transcript);
+            } else if (data.fallback) {
+                // Transcription package not installed
+                setAudioStatus('⚠️ Transcription not set up. See README.', '#fef3c7', '#92400e');
+                addMessage('assistant', '⚠️ Transcription requires setup. Either set the OPENAI_API_KEY environment variable or install openai-whisper. See README.md for details. You can still type your question below!', 'error');
+            } else {
+                setAudioStatus('❌ Transcription failed: ' + (data.error || 'Unknown error'), '#fee2e2', '#991b1b');
+            }
+        } catch (err) {
+            setAudioStatus('❌ Could not reach backend.', '#fee2e2', '#991b1b');
+            addMessage('assistant', '❌ Backend not reachable. Make sure app.py is running on port 5000.', 'error');
+        } finally {
+            sendAudioBtn.disabled = false;
+            sendAudioBtn.textContent = '🚀 Transcribe & Ask AI';
+        }
+    }
+
+    // ─── Text send ───────────────────────────────────────────────
+    async function sendTextMessage() {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        addMessage('user', message);
+        userInput.value = '';
+        setBusy(true);
+        try {
+            await sendToBackend(message);
+        } finally {
+            setBusy(false);
+            userInput.focus();
+        }
+    }
+
+    // ─── Backend call ─────────────────────────────────────────────
+    async function sendToBackend(message) {
+        showLoading();
+        try {
+            const res = await fetch('http://localhost:5000/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            });
+
+            const data = await res.json();
+            removeLoading();
+
+            if (data.success) {
+                addMessage('assistant', data.response);
+            } else {
+                addMessage('assistant', '❌ ' + data.response, 'error');
+            }
+        } catch (err) {
+            removeLoading();
+            addMessage('assistant', '❌ Connection error. Make sure app.py is running on port 5000.', 'error');
+            status.textContent = 'Backend: Disconnected ✗';
+            status.style.color = '#ef4444';
+        }
+    }
+
+    // ─── UI helpers ───────────────────────────────────────────────
+    function setAudioStatus(text, bg, color) {
+        audioStatus.textContent = text;
+        audioStatus.style.background = bg;
+        audioStatus.style.color = color;
+    }
+
+    function setBusy(busy) {
+        sendBtn.disabled = busy;
+    }
+
+    function addMessage(role, content, type) {
+        const wrap = document.createElement('div');
+        wrap.className = `message ${type || role}`;
+
+        const inner = document.createElement('div');
+        inner.className = 'message-content';
+        inner.textContent = content;
+
+        wrap.appendChild(inner);
+        messagesDiv.appendChild(wrap);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function showLoading() {
+        const wrap = document.createElement('div');
+        wrap.className = 'message assistant';
+        wrap.id = 'loading-indicator';
+
+        const inner = document.createElement('div');
+        inner.className = 'message-content loading';
+        inner.innerHTML = '<span></span><span></span><span></span>';
+
+        wrap.appendChild(inner);
+        messagesDiv.appendChild(wrap);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function removeLoading() {
+        const el = document.getElementById('loading-indicator');
+        if (el) el.remove();
+    }
+
+    // ─── Health check on load ─────────────────────────────────────
+    (async () => {
+        try {
+            const res = await fetch('http://localhost:5000/health');
+            const data = await res.json();
+            if (data.ollama === 'running') {
+                status.textContent = `Backend: Connected ✓  |  Ollama: Running ✓  |  Model: ${data.model}`;
+                status.style.color = '#10b981';
+            } else {
+                status.textContent = 'Backend: Connected ✓  |  Ollama: NOT RUNNING ✗ — run: ollama serve';
+                status.style.color = '#f59e0b';
+            }
+        } catch {
+            status.textContent = 'Backend: Disconnected ✗ — run: python app.py';
+            status.style.color = '#ef4444';
+        }
+    })();
+</script>
+</body>
+</html>
