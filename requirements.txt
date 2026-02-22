@@ -1,0 +1,10 @@
+flask>=2.3.0
+flask-cors>=4.0.0
+requests>=2.31.0
+
+# For cloud Whisper transcription (optional, needs OPENAI_API_KEY env var)
+openai>=1.0.0
+
+# For local Whisper transcription (optional, ~1.5GB download on first run)
+# openai-whisper>=20231117
+# torch>=2.0.0
